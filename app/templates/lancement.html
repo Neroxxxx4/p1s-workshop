@@ -19,12 +19,12 @@
         </select>
       </label>
       <div class="grid2">
-        <label>Poids objet (g) <input name="poids" type="number" inputmode="decimal" step="any" min="0" value="{{ form.poids or 0 }}"></label>
-        <label>Perte (g) <input name="perte" type="number" inputmode="decimal" step="any" min="0" value="{{ form.perte or 5 }}"></label>
-        <label>Heures <input name="heures" type="number" inputmode="numeric" min="0" step="1" value="{{ form.heures or 0 }}"></label>
-        <label>Minutes <input name="minutes" type="number" inputmode="numeric" min="0" step="1" value="{{ form.minutes or 0 }}"></label>
-        <label>Prix du kWh (€) <input name="kwh" type="number" inputmode="decimal" step="any" min="0" value="{{ form.kwh or 0.25 }}"></label>
-        <label>Usure machine (€/h) <input name="usure" type="number" inputmode="decimal" step="any" min="0" value="{{ form.usure or 0.10 }}"></label>
+        <label>Poids objet (g) <input name="poids" type="text" inputmode="decimal" autocomplete="off" value="{{ form.poids or 0 }}"></label>
+        <label>Perte (g) <input name="perte" type="text" inputmode="decimal" autocomplete="off" value="{{ form.perte or 5 }}"></label>
+        <label>Heures <input name="heures" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="{{ form.heures or 0 }}"></label>
+        <label>Minutes <input name="minutes" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="{{ form.minutes or 0 }}"></label>
+        <label>Prix du kWh (€) <input name="kwh" type="text" inputmode="decimal" autocomplete="off" value="{{ form.kwh or 0.25 }}"></label>
+        <label>Usure machine (€/h) <input name="usure" type="text" inputmode="decimal" autocomplete="off" value="{{ form.usure or 0.10 }}"></label>
       </div>
       <div class="apercu">Coût estimé <b class="num" id="apercu-cout">—</b><small id="apercu-detail"></small></div>
       <button class="btn primary big">🚀 Lancer l'impression</button>
@@ -33,11 +33,13 @@
   </section>
   <section class="card">
     <h2>Bobines</h2>
+    <div class="liste">
     {% for b in bobines %}
     <div class="bobine"><b>{{ b.id }}</b>{{ jauge(b) }}</div>
     {% else %}
     <p class="empty">Stock vide.</p>
     {% endfor %}
+    </div>
   </section>
 </div>
 {% endblock %}

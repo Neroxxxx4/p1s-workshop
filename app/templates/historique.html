@@ -22,14 +22,15 @@
 
 <section class="card">
   <h2>Impressions</h2>
+  <div class="liste">
   {% for i in impressions %}
   <div class="impression">
     <div class="ligne"><b>{{ i.nom }}</b><span class="badge {{ i.statut }}">{{ STATUTS.get(i.statut, i.statut) }}</span></div>
     <small class="num">
       {{ i.date_lancement|date_courte }} · {{ i.duree_minutes|duree }} ·
       {% if i.bobine_ok %}{{ i.bobine_id }}{% else %}<s title="Bobine supprimée">{{ i.bobine_id or '?' }}</s>{% endif %} ·
-      {{ i.poids|round(1) }} g · <b>{{ i.cout|eur }}</b>
-      {% if i.statut == 'EN_COURS' %} · fin ~{{ i.fin_prevue[11:16] }}{% endif %}
+      {{ '%g'|format(i.poids) }} g · <b>{{ i.cout|eur }}</b>
+      {% if i.statut == 'EN_COURS' %} · fin ~{{ i.fin_prevue|fin_courte }}{% endif %}
     </small>
     <details>
       <summary>Actions</summary>
@@ -48,7 +49,7 @@
         <form method="post" action="{{ url_for('main.historique_supprimer') }}" data-confirm="Supprimer « {{ i.nom }} » ?">
           {{ csrf_field }}<input type="hidden" name="id" value="{{ i.id }}">
           <button class="btn danger">🗑 Supprimer</button>
-          {% if i.bobine_ok %}<button class="btn danger" name="rendre" value="1">↩️ Supprimer et rendre {{ i.poids|round(1) }} g</button>{% endif %}
+          {% if i.bobine_ok %}<button class="btn danger" name="rendre" value="1">↩️ Supprimer et rendre {{ '%g'|format(i.poids) }} g</button>{% endif %}
         </form>
       </div>
     </details>
@@ -56,6 +57,7 @@
   {% else %}
   <p class="empty">Aucune impression pour l'instant.</p>
   {% endfor %}
+  </div>
 </section>
 
 <div class="cols">

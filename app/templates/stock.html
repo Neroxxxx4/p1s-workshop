@@ -5,6 +5,7 @@
 <div class="cols">
   <section class="card">
     <h2>Bobines ({{ bobines|length }})</h2>
+    <div class="liste">
     {% for b in bobines %}
     <div class="bobine">
       <div class="ligne"><b>{{ b.id }}</b><span class="num">{{ b.prix|eur }}/kg</span></div>
@@ -14,8 +15,8 @@
         <summary>Modifier / supprimer</summary>
         <form method="post" action="{{ url_for('main.stock_modifier') }}" class="grid2">
           {{ csrf_field }}<input type="hidden" name="id" value="{{ b.id }}">
-          <label>Prix (€/kg) <input name="prix" type="number" inputmode="decimal" step="any" min="0" value="{{ b.prix }}" required></label>
-          <label>Reste (g) <input name="reste" type="number" inputmode="decimal" step="any" min="0" value="{{ b.reste }}" required></label>
+          <label>Prix (€/kg) <input name="prix" type="text" inputmode="decimal" autocomplete="off" value="{{ b.prix }}" required></label>
+          <label>Reste (g) <input name="reste" type="text" inputmode="decimal" autocomplete="off" value="{{ b.reste }}" required></label>
           <button class="btn">Enregistrer</button>
         </form>
         <form method="post" action="{{ url_for('main.stock_supprimer') }}" data-confirm="Supprimer la bobine « {{ b.id }} » ?">
@@ -27,6 +28,7 @@
     {% else %}
     <p class="empty">Aucune bobine. Ajoute la première avec le formulaire.</p>
     {% endfor %}
+    </div>
   </section>
   <section class="card">
     <h2>Ajouter une bobine</h2>
@@ -38,8 +40,8 @@
           <select name="matiere">{% for m in matieres %}<option>{{ m }}</option>{% endfor %}</select>
         </label>
         <label>Couleur <input name="couleur" required placeholder="Noir"></label>
-        <label>Prix (€/kg) <input name="prix" type="number" inputmode="decimal" step="any" min="0" value="20"></label>
-        <label>Capacité (g) <input name="capacite" type="number" inputmode="decimal" step="any" min="1" value="1000"></label>
+        <label>Prix (€/kg) <input name="prix" type="text" inputmode="decimal" autocomplete="off" value="20"></label>
+        <label>Capacité (g) <input name="capacite" type="text" inputmode="decimal" autocomplete="off" value="1000"></label>
       </div>
       <button class="btn primary big">Ajouter</button>
     </form>

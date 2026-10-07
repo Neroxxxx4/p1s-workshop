@@ -2,6 +2,7 @@ import csv
 import hmac
 import io
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -19,6 +20,14 @@ from . import services as s
 # ponytail: un seul blueprint pour les 6 onglets (~300 lignes), à découper si ça grossit.
 bp = Blueprint("main", __name__)
 
+# Colonnes minimales attendues dans une base importée (capacite est ajoutée par migration).
+COLONNES_REQUISES = {
+    "stock": {"id", "marque", "matiere", "couleur", "prix", "reste"},
+    "impressions": {"id", "date_lancement", "nom", "bobine_id", "poids", "cout", "duree_minutes", "statut",
+                    "fin_prevue"},
+    "ventes": {"id", "date", "nom", "nb_pieces", "cout_total", "marge_pct", "prix_vente", "benefice",
+               "pieces_json"},
+}
 MATIERES = ("PLA", "PETG", "TPU", "ASA", "ABS", "Autre")
 ONGLETS = [("main.lancement", "🚀 Lancement"), ("main.stock", "🧵 Stock"),
            ("main.historique", "📜 Historique"), ("main.prix", "🏷️ Prix"),
@@ -36,12 +45,16 @@ def garde():
     if request.method == "POST":
         jeton = session.get("csrf")
         if not jeton or not hmac.compare_digest(request.form.get("csrf", ""), jeton):
-            abort(400, "Jeton de sécurité invalide : recharge la page et réessaie.")
+            # Session perdue (ex. app iPhone rouverte après longtemps) : on recharge la page proprement.
+            flash("Session expirée : la page a été rechargée, refais l'action.", "error")
+            retour = request.referrer or ""
+            return redirect(retour if retour.startswith(request.host_url) else url_for("main.index"))
     return None
 
 
 @bp.app_context_processor
 def contexte():
+    session.permanent = True   # sinon iOS jette le cookie à la fermeture de l'app écran d'accueil
     if "csrf" not in session:
         session["csrf"] = secrets.token_hex(16)
     metrics = db.get().execute("""SELECT
@@ -72,6 +85,16 @@ def date_courte(texte):
         return (texte or "")[:10]
 
 
+@bp.app_template_filter("fin_courte")
+def fin_courte(texte):
+    """« 14:30 » si c'est aujourd'hui, sinon « 08/10 14:30 »."""
+    try:
+        d = datetime.strptime(texte, s.FMT)
+    except (TypeError, ValueError):
+        return texte or ""
+    return d.strftime("%H:%M" if d.date() == s.now().date() else "%d/%m %H:%M")
+
+
 @bp.app_template_filter("pieces")
 def pieces(texte):
     try:
@@ -94,6 +117,8 @@ def nombre(form, cle, defaut, libelle, erreurs):
     try:
         v = s.parse_float(brut)
     except ValueError:
+        v = math.nan
+    if not math.isfinite(v):   # "nan"/"inf" passent float() et videraient une bobine
         erreurs.append(f"« {libelle} » n'est pas un nombre valide.")
         return defaut
     if v < 0:
@@ -150,6 +175,8 @@ def lancement():
         erreurs.append("Le poids de l'objet doit être supérieur à 0 g.")
     if not erreurs and duree_min <= 0:
         erreurs.append("La durée doit être supérieure à 0.")
+    if not erreurs and duree_min > 30 * 24 * 60:
+        erreurs.append("La durée dépasse 30 jours : vérifie les heures et minutes.")
     if erreurs:
         for e in erreurs:
             flash(e, "error")
@@ -165,6 +192,8 @@ def lancement():
     conn.execute("UPDATE stock SET reste = MAX(0, reste - ?) WHERE id = ?", (total, bobine["id"]))
     conn.commit()
     flash(f"« {nom} » lancé : {cout:.2f} €, fin prévue à {fin:%H:%M}.", "success")
+    if total > bobine["reste"]:
+        flash(f"Attention : il ne restait que {bobine['reste']:g} g sur « {bobine['id']} », la bobine est à 0.", "error")
     return redirect(url_for(".historique"))
 
 
@@ -217,18 +246,23 @@ def stock_modifier():
         flash(e, "error")
     if not erreurs:
         conn = db.get()
-        conn.execute("UPDATE stock SET prix = ?, reste = ? WHERE id = ?", (prix, reste, request.form.get("id")))
-        conn.commit()
-        flash("Bobine mise à jour.", "success")
+        if conn.execute("UPDATE stock SET prix = ?, reste = ? WHERE id = ?",
+                        (prix, reste, request.form.get("id"))).rowcount:
+            conn.commit()
+            flash("Bobine mise à jour.", "success")
+        else:
+            flash("Bobine introuvable (déjà supprimée ?).", "error")
     return redirect(url_for(".stock"))
 
 
 @bp.post("/stock/supprimer")
 def stock_supprimer():
     conn = db.get()
-    conn.execute("DELETE FROM stock WHERE id = ?", (request.form.get("id"),))
-    conn.commit()
-    flash("Bobine supprimée.", "success")
+    if conn.execute("DELETE FROM stock WHERE id = ?", (request.form.get("id"),)).rowcount:
+        conn.commit()
+        flash("Bobine supprimée.", "success")
+    else:
+        flash("Bobine introuvable (déjà supprimée ?).", "error")
     return redirect(url_for(".stock"))
 
 
@@ -254,9 +288,11 @@ def historique_statut():
     if statut not in s.STATUTS:
         abort(400)
     conn = db.get()
-    conn.execute("UPDATE impressions SET statut = ? WHERE id = ?", (statut, request.form.get("id")))
-    conn.commit()
-    flash(f"Statut passé à « {s.STATUTS[statut]} ».", "success")
+    if conn.execute("UPDATE impressions SET statut = ? WHERE id = ?", (statut, request.form.get("id"))).rowcount:
+        conn.commit()
+        flash(f"Statut passé à « {s.STATUTS[statut]} ».", "success")
+    else:
+        flash("Impression introuvable (déjà supprimée ?).", "error")
     return redirect(url_for(".historique"))
 
 
@@ -310,8 +346,8 @@ def historique_import():
         try:
             poids, cout = s.parse_float(ligne.get("poids")), round(s.parse_float(ligne.get("cout")), 2)
         except ValueError:
-            poids = None
-        if not nom or poids is None:
+            poids = cout = math.nan
+        if not nom or not (0 <= poids < math.inf and 0 <= cout < math.inf):   # nan échoue aussi
             ignorees += 1
             continue
         date = s.parse_date(ligne.get("date"))
@@ -339,9 +375,11 @@ def historique_vider():
 
 @bp.route("/prix")
 def prix():
-    pieces_ok = db.get().execute("SELECT id, nom, cout, date_lancement FROM impressions "
-                                 "WHERE statut = 'SUCCES' ORDER BY date_lancement DESC, id DESC").fetchall()
-    return render_template("prix.html", pieces=pieces_ok, scenarios=s.MARGES_SCENARIOS)
+    conn = db.get()
+    pieces_ok = conn.execute("SELECT id, nom, cout, date_lancement FROM impressions "
+                             "WHERE statut = 'SUCCES' ORDER BY date_lancement DESC, id DESC").fetchall()
+    vendues = {p.get("id") for (pj,) in conn.execute("SELECT pieces_json FROM ventes") for p in pieces(pj)}
+    return render_template("prix.html", pieces=pieces_ok, vendues=vendues, scenarios=s.MARGES_SCENARIOS)
 
 
 @bp.post("/prix/vendre")
@@ -394,9 +432,11 @@ def ventes():
 @bp.post("/ventes/supprimer")
 def ventes_supprimer():
     conn = db.get()
-    conn.execute("DELETE FROM ventes WHERE id = ?", (request.form.get("id"),))
-    conn.commit()
-    flash("Vente supprimée.", "success")
+    if conn.execute("DELETE FROM ventes WHERE id = ?", (request.form.get("id"),)).rowcount:
+        conn.commit()
+        flash("Vente supprimée.", "success")
+    else:
+        flash("Vente introuvable (déjà supprimée ?).", "error")
     return redirect(url_for(".ventes"))
 
 
@@ -447,6 +487,13 @@ def db_import():
             if manquantes:
                 flash(f"Base refusée : table(s) manquante(s) {', '.join(sorted(manquantes))}.", "error")
                 return redirect(url_for(".reglages"))
+            for table, requises in COLONNES_REQUISES.items():
+                if table in tables:
+                    cols = {r[1] for r in src.execute(f"PRAGMA table_info({table})")}
+                    if requises - cols:
+                        flash(f"Base refusée : colonnes manquantes dans « {table} » : "
+                              f"{', '.join(sorted(requises - cols))}.", "error")
+                        return redirect(url_for(".reglages"))
             live = db.get()
             sauvegarde = f"{current_app.config['DB_PATH']}.bak-{s.now():%Y%m%d-%H%M%S}"
             with closing(sqlite3.connect(sauvegarde)) as bak:

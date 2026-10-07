@@ -18,6 +18,13 @@ def create_app(config=None):
     )
     app.config.update(config or {})
     Path(app.config["DB_PATH"]).parent.mkdir(parents=True, exist_ok=True)
+    dossier = Path(app.config["DB_PATH"]).resolve().parent
+    if not os.access(dossier, os.W_OK):
+        raise SystemExit(f"Le dossier {dossier} n'est pas accessible en écriture pour l'UID {os.getuid()}. "
+                         "Corrige la ligne `user:` du docker-compose.yml ou fais un chown du dossier (voir README).")
+    # Version des fichiers statiques : force le rechargement du CSS/JS après une mise à jour (cache iPhone).
+    statiques = Path(app.static_folder).iterdir()
+    app.config["STATIC_V"] = int(max(f.stat().st_mtime for f in statiques))
     app.secret_key = os.environ.get("SECRET_KEY") or _cle_persistante(app.config["DB_PATH"])
 
     db.init_app(app)

@@ -10,15 +10,16 @@
   <meta name="theme-color" content="#5B5FEF">
   <title>{% block title %}{% endblock %} · P1S Workshop</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=config.STATIC_V) }}">
+  <script src="{{ url_for('static', filename='app.js', v=config.STATIC_V) }}" defer></script>
 </head>
 <body>
 <header class="top">
   <h1>🖨️ P1S Workshop</h1>
   {% if not public %}
   <div class="grid4 metrics">
-    <div class="metric"><span>Filament restant</span><b>{{ metrics.filament|round|int }} g</b></div>
+    <div class="metric"><span>Filament</span><b>{{ metrics.filament|round|int }} g</b></div>
     <div class="metric"><span>Impressions</span><b>{{ metrics.nb }}</b></div>
     <div class="metric"><span>Coût cumulé</span><b>{{ metrics.cout|eur }}</b></div>
     <div class="metric"><span>En cours</span><b>{{ metrics.en_cours }}</b></div>

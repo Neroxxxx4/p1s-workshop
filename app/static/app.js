@@ -3,11 +3,18 @@ const eur = (v) => `${v.toFixed(2)} €`;
 const r2 = (v) => Math.round(v * 100) / 100;
 const num = (el) => parseFloat(String(el?.value ?? "").replace(",", ".")) || 0;
 
-// Confirmation des formulaires sensibles
+// Confirmation des formulaires sensibles + anti double-envoi (double tap = 2 impressions, 2× le filament)
 document.addEventListener("submit", (e) => {
-  const msg = e.target.dataset.confirm;
-  if (msg && !confirm(msg)) e.preventDefault();
+  const f = e.target, msg = f.dataset.confirm;
+  if (e.defaultPrevented || (msg && !confirm(msg))) return e.preventDefault();
+  if (f.dataset.envoye) return e.preventDefault();
+  f.dataset.envoye = "1";
 });
+// Retour arrière (cache du navigateur) : les formulaires redeviennent utilisables
+addEventListener("pageshow", () => document.querySelectorAll("form[data-envoye]").forEach((f) => delete f.dataset.envoye));
+
+// Sur téléphone, l'onglet actif peut être hors de l'écran dans la barre défilante
+document.querySelector(".tabs .active")?.scrollIntoView({ inline: "center", block: "nearest" });
 
 // Stock : confirmation si la bobine existe déjà (=> recharge)
 const formBobine = document.getElementById("form-bobine");

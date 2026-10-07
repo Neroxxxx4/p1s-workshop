@@ -9,6 +9,7 @@
 
 <section class="card">
   <h2>Historique des ventes</h2>
+  <div class="liste">
   {% for v in ventes %}
   <details class="vente">
     <summary><b>{{ v.nom }}</b><small>{{ v.date }}</small><b class="num">{{ v.prix_vente|eur }}</b></summary>
@@ -29,6 +30,7 @@
   {% else %}
   <p class="empty">Aucune vente. Compose un panier dans l'onglet Prix.</p>
   {% endfor %}
+  </div>
 </section>
 
 <section class="card danger-zone">

@@ -72,8 +72,54 @@ def test_tous_les_onglets_sur_ancienne_db(env):
 
 
 def test_csrf_obligatoire(env):
+    _, client, path = env
+    r = client.post("/stock/supprimer", data={"id": "Rosa3D PETG Vert"}, follow_redirects=True)
+    assert "Session expirée" in r.get_data(as_text=True)
+    assert lire(path, "SELECT COUNT(*) FROM stock")[0][0] == 1   # rien supprimé
+
+
+def test_session_permanente_pour_iphone(env):
     _, client, _ = env
-    assert client.post("/stock/supprimer", data={"id": "Rosa3D PETG Vert"}).status_code == 400
+    assert "Expires=" in client.get("/stock").headers["Set-Cookie"]
+
+
+@pytest.mark.parametrize("valeur", ["nan", "inf", "-inf", "1e400"])
+def test_nombres_non_finis_refuses(env, valeur):
+    _, client, path = env
+    r = post(client, "/lancement", bobine="Rosa3D PETG Vert", poids=valeur, heures="1")
+    assert r.status_code == 400 and "nombre valide" in r.get_data(as_text=True)
+    assert lire(path, "SELECT reste FROM stock")[0][0] == 153            # bobine intacte
+    assert post(client, "/prix/vendre", marge=valeur, ids=["1"]).status_code == 302
+    assert lire(path, "SELECT COUNT(*) FROM ventes")[0][0] == 1
+
+
+def test_virgule_decimale_iphone(env):
+    _, client, path = env
+    post(client, "/lancement", bobine="Rosa3D PETG Vert", poids="12,5", perte="0", kwh="0,25", heures="1")
+    assert lire(path, "SELECT poids FROM impressions ORDER BY id DESC LIMIT 1")[0][0] == 12.5
+
+
+def test_ids_inconnus_signales(env):
+    _, client, _ = env
+    for url, data in [("/historique/statut", {"id": "999", "statut": "SUCCES"}),
+                      ("/stock/modifier", {"id": "?", "prix": "1", "reste": "1"}),
+                      ("/stock/supprimer", {"id": "?"}), ("/ventes/supprimer", {"id": "999"})]:
+        r = client.post(url, data={"csrf": "jeton", **data}, follow_redirects=True)
+        assert "introuvable" in r.get_data(as_text=True), url
+
+
+def test_stock_insuffisant_averti(env):
+    _, client, path = env
+    r = client.post("/lancement", data={"csrf": "jeton", "bobine": "Rosa3D PETG Vert", "poids": "500",
+                                        "heures": "1"}, follow_redirects=True)
+    assert "il ne restait que 153 g" in r.get_data(as_text=True)
+    assert lire(path, "SELECT reste FROM stock")[0][0] == 0
+
+
+def test_pieces_deja_vendues_marquees(env):
+    _, client, _ = env
+    html = client.get("/prix").get_data(as_text=True)
+    assert html.count("déjà vendue") == 1   # l'impression 1 est dans la vente n°2
 
 
 def test_lancement_et_validations(env):
@@ -189,3 +235,29 @@ def test_mot_de_passe(tmp_path, monkeypatch):
         jeton = sess["csrf"]
     client.post("/login", data={"csrf": jeton, "password": "secret"})
     assert client.get("/stock").status_code == 200
+
+
+def test_duree_absurde_refusee(env):
+    _, client, _ = env
+    r = post(client, "/lancement", bobine="Rosa3D PETG Vert", poids="10", heures="1000000")
+    assert r.status_code == 400 and "30 jours" in r.get_data(as_text=True)
+
+
+def test_import_csv_valeurs_invalides_ignorees(env):
+    _, client, path = env
+    csv_txt = "Date,Nom,Bobine,Poids,Cout,Statut\n,A,X,-5,1,OK\n,B,X,5,nan,OK\n,C,X,inf,1,OK\n,D,X,5,1,OK\n"
+    r = client.post("/historique/import", data={"csrf": "jeton", "csv": (io.BytesIO(csv_txt.encode()), "h.csv")},
+                    follow_redirects=True)
+    assert "1 ligne(s) importée(s), 3 ignorée(s)" in r.get_data(as_text=True)
+
+
+def test_import_db_colonnes_manquantes_refuse(env):
+    _, client, path = env
+    p = path.parent / "autre_app.db"
+    with sqlite3.connect(p) as c:
+        c.executescript("CREATE TABLE stock (id TEXT); CREATE TABLE impressions (id INTEGER);")
+    c.close()
+    r = client.post("/db/import", data={"csrf": "jeton", "confirme": "1", "db": (io.BytesIO(p.read_bytes()), "x.db")},
+                    follow_redirects=True)
+    assert "colonnes manquantes" in r.get_data(as_text=True)
+    assert lire(path, "SELECT COUNT(*) FROM impressions")[0][0] == 3

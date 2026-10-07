@@ -8,7 +8,7 @@
     <div class="pieces">
       {% for p in pieces %}
       <button type="button" class="piece" data-id="{{ p.id }}" data-nom="{{ p.nom }}" data-cout="{{ p.cout }}" aria-pressed="false">
-        <span>{{ p.nom }}<small>{{ p.date_lancement|date_courte }}</small></span><b class="num">{{ p.cout|eur }}</b>
+        <span>{{ p.nom }}<small>{{ p.date_lancement|date_courte }}{% if p.id in vendues %} · <em>déjà vendue</em>{% endif %}</small></span><b class="num">{{ p.cout|eur }}</b>
       </button>
       {% else %}
       <p class="empty">Aucune impression réussie.</p>
@@ -28,7 +28,7 @@
       <label>Marge (%)
         <div class="marge">
           <input type="range" min="0" max="500" step="5" value="100" id="marge-range" aria-label="Marge">
-          <input type="number" min="0" step="any" value="100" name="marge" id="marge" inputmode="decimal">
+          <input type="text" inputmode="decimal" autocomplete="off" value="100" name="marge" id="marge">
         </div>
       </label>
       <div class="prix-big"><span>Prix de vente</span><b class="num" id="p-prix">0.00 €</b></div>

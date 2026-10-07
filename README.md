@@ -75,3 +75,14 @@ L'app est ensuite sur `http://IP_DU_NAS:8501`. Sur iPhone : Safari → Partager 
 - **Restauration** : onglet **DB → Importer**. La base actuelle est d'abord sauvegardée à côté (`workshop.db.bak-AAAAMMJJ-HHMMSS`).
 - **Sauvegarde automatique** : inclure le dossier `docker/P1SWorkshop/data` dans une tâche de l'app **Sync & Backup** d'UGOS.
 - Copier `workshop.db` directement est sûr quand le conteneur est arrêté. Il tourne sans WAL, le fichier seul suffit.
+
+## 4. Dépôts Git
+
+`git push` envoie le code à la fois sur GitHub (qui construit l'image) et sur le Gitea du NAS
+(`http://192.168.1.26:3111/Maurice/P1S-Workshop`), qui sert de copie locale.
+Pour retrouver cette configuration sur une autre machine :
+
+```bash
+git remote set-url --add --push origin https://github.com/Neroxxxx4/p1s-workshop.git
+git remote set-url --add --push origin http://192.168.1.26:3111/Maurice/P1S-Workshop.git
+```

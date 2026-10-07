@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Historique{% endblock %}
+{% block content %}
+{% for a in alertes %}
+<div class="alerte">
+  <span>🔔 « {{ a.nom }} » est terminé !</span>
+  <form method="post" action="{{ url_for('main.historique_statut') }}">
+    {{ csrf_field }}<input type="hidden" name="id" value="{{ a.id }}">
+    <button class="btn ok" name="statut" value="SUCCES">✅ Réussite</button>
+    <button class="btn bad" name="statut" value="ECHEC">❌ Échec</button>
+  </form>
+</div>
+{% endfor %}
+
+<div class="grid4 metrics">
+  <div class="metric"><span>Total</span><b>{{ impressions|length }}</b></div>
+  <div class="metric"><span>Réussites</span><b>{{ ok }}</b></div>
+  <div class="metric"><span>Échecs</span><b>{{ ko }}</b></div>
+  <div class="metric"><span>Taux de réussite</span>
+    <b class="{{ '' if taux is none else 'c-ok' if taux >= 80 else 'c-warn' if taux >= 50 else 'c-bad' }}">{{ '—' if taux is none else taux ~ ' %' }}</b></div>
+</div>
+
+<section class="card">
+  <h2>Impressions</h2>
+  {% for i in impressions %}
+  <div class="impression">
+    <div class="ligne"><b>{{ i.nom }}</b><span class="badge {{ i.statut }}">{{ STATUTS.get(i.statut, i.statut) }}</span></div>
+    <small class="num">
+      {{ i.date_lancement|date_courte }} · {{ i.duree_minutes|duree }} ·
+      {% if i.bobine_ok %}{{ i.bobine_id }}{% else %}<s title="Bobine supprimée">{{ i.bobine_id or '?' }}</s>{% endif %} ·
+      {{ i.poids|round(1) }} g · <b>{{ i.cout|eur }}</b>
+      {% if i.statut == 'EN_COURS' %} · fin ~{{ i.fin_prevue[11:16] }}{% endif %}
+    </small>
+    <details>
+      <summary>Actions</summary>
+      <div class="actions">
+        {% if i.statut == 'EN_COURS' %}
+        <form method="post" action="{{ url_for('main.historique_statut') }}">
+          {{ csrf_field }}<input type="hidden" name="id" value="{{ i.id }}">
+          <button class="btn ok" name="statut" value="SUCCES">⏹ Forcer la fin</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('main.historique_statut') }}" class="inline">
+          {{ csrf_field }}<input type="hidden" name="id" value="{{ i.id }}">
+          <select name="statut" aria-label="Statut">{% for k, v in STATUTS.items() %}<option value="{{ k }}" {% if k == i.statut %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+          <button class="btn">Changer</button>
+        </form>
+        <form method="post" action="{{ url_for('main.historique_supprimer') }}" data-confirm="Supprimer « {{ i.nom }} » ?">
+          {{ csrf_field }}<input type="hidden" name="id" value="{{ i.id }}">
+          <button class="btn danger">🗑 Supprimer</button>
+          {% if i.bobine_ok %}<button class="btn danger" name="rendre" value="1">↩️ Supprimer et rendre {{ i.poids|round(1) }} g</button>{% endif %}
+        </form>
+      </div>
+    </details>
+  </div>
+  {% else %}
+  <p class="empty">Aucune impression pour l'instant.</p>
+  {% endfor %}
+</section>
+
+<div class="cols">
+  <section class="card">
+    <h2>Importer un CSV</h2>
+    <p><small>Colonnes : <code>Date, Nom, Bobine, Poids, Cout, Statut</code> (séparateur , ou ;).</small></p>
+    <form method="post" action="{{ url_for('main.historique_import') }}" enctype="multipart/form-data">
+      {{ csrf_field }}
+      <input type="file" name="csv" accept=".csv,text/csv" required>
+      <button class="btn">Importer</button>
+    </form>
+  </section>
+  <section class="card danger-zone">
+    <h2>⚠️ Zone de danger</h2>
+    <form method="post" action="{{ url_for('main.historique_vider') }}" data-confirm="Vider TOUT l'historique ? C'est définitif.">
+      {{ csrf_field }}
+      <label class="check"><input type="checkbox" name="confirme" value="1" required> Je veux supprimer toutes les impressions</label>
+      <button class="btn danger">Vider l'historique</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

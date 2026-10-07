@@ -1,0 +1,5 @@
+{% macro jauge(b) -%}
+{%- set p = b|pct -%}
+<div class="jauge" title="{{ p }} %"><i class="{{ 'ok' if p > 50 else 'warn' if p > 20 else 'bad' }}" style="width: {{ p }}%"></i></div>
+<small class="num">{{ b.reste|round|int }} / {{ (b.capacite or 1000)|round|int }} g · {{ p }} %</small>
+{%- endmacro %}

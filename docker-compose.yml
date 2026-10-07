@@ -1,0 +1,17 @@
+services:
+  p1s-workshop:
+    image: ghcr.io/neroxxxx4/p1s-workshop:latest
+    pull_policy: always   # chaque redémarrage du projet récupère la dernière version
+    container_name: p1s-workshop
+    # UID:GID du propriétaire du dossier data sur le NAS (commande `id` en SSH, voir README).
+    user: "1000:10"
+    ports:
+      - "8501:8501"
+    volumes:
+      - /volume1/docker/P1SWorkshop/data:/data
+    environment:
+      - DB_PATH=/data/workshop.db
+      - PORT=8501
+      - TZ=Europe/Paris
+      # - APP_PASSWORD=change-moi   # décommenter pour protéger l'accès par un mot de passe
+    restart: unless-stopped

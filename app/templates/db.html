@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Base de données{% endblock %}
+{% block content %}
+<div class="cols">
+  <section class="card">
+    <h2>Exporter</h2>
+    <p><small>Base actuelle : <code>{{ db_path }}</code></small></p>
+    <a class="btn primary big" href="{{ url_for('main.db_export') }}">⬇️ Télécharger une sauvegarde</a>
+  </section>
+  <section class="card danger-zone">
+    <h2>Importer</h2>
+    <p><small>Remplace toute la base. L'actuelle est d'abord sauvegardée à côté (<code>workshop.db.bak-…</code>).</small></p>
+    <form method="post" action="{{ url_for('main.db_import') }}" enctype="multipart/form-data" data-confirm="Remplacer la base actuelle par ce fichier ?">
+      {{ csrf_field }}
+      <input type="file" name="db" accept=".db,.sqlite,.sqlite3" required>
+      <label class="check"><input type="checkbox" name="confirme" value="1" required> Je veux remplacer la base actuelle</label>
+      <button class="btn danger">Importer la base</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Ventes{% endblock %}
+{% block content %}
+<div class="grid3 metrics">
+  <div class="metric"><span>Ventes</span><b>{{ totaux.nb }}</b></div>
+  <div class="metric"><span>Revenus</span><b>{{ totaux.revenus|eur }}</b></div>
+  <div class="metric"><span>Bénéfices</span><b class="c-ok">{{ totaux.benefices|eur }}</b></div>
+</div>
+
+<section class="card">
+  <h2>Historique des ventes</h2>
+  {% for v in ventes %}
+  <details class="vente">
+    <summary><b>{{ v.nom }}</b><small>{{ v.date }}</small><b class="num">{{ v.prix_vente|eur }}</b></summary>
+    <div class="grid4 metrics">
+      <div class="metric"><span>Coût</span><b>{{ v.cout_total|eur }}</b></div>
+      <div class="metric"><span>Marge</span><b>+{{ v.marge_pct|round|int }} %</b></div>
+      <div class="metric"><span>Prix</span><b>{{ v.prix_vente|eur }}</b></div>
+      <div class="metric"><span>Bénéfice</span><b class="c-ok">{{ v.benefice|eur }}</b></div>
+    </div>
+    <ul class="panier">
+      {% for p in v.pieces_json|pieces %}<li><span>{{ p.nom }}</span><b class="num">{{ p.cout|eur }}</b></li>{% endfor %}
+    </ul>
+    <form method="post" action="{{ url_for('main.ventes_supprimer') }}" data-confirm="Supprimer la vente « {{ v.nom }} » ?">
+      {{ csrf_field }}<input type="hidden" name="id" value="{{ v.id }}">
+      <button class="btn danger">🗑 Supprimer la vente</button>
+    </form>
+  </details>
+  {% else %}
+  <p class="empty">Aucune vente. Compose un panier dans l'onglet Prix.</p>
+  {% endfor %}
+</section>
+
+<section class="card danger-zone">
+  <h2>⚠️ Zone de danger</h2>
+  <form method="post" action="{{ url_for('main.ventes_vider') }}" data-confirm="Effacer TOUTES les ventes ? C'est définitif.">
+    {{ csrf_field }}
+    <label class="check"><input type="checkbox" name="confirme" value="1" required> Je veux effacer toutes les ventes</label>
+    <button class="btn danger">Effacer toutes les ventes</button>
+  </form>
+</section>
+{% endblock %}

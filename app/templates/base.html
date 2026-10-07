@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="P1S Workshop">
+  <meta name="theme-color" content="#5B5FEF">
+  <title>{% block title %}{% endblock %} · P1S Workshop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+<header class="top">
+  <h1>🖨️ P1S Workshop</h1>
+  {% if not public %}
+  <div class="grid4 metrics">
+    <div class="metric"><span>Filament restant</span><b>{{ metrics.filament|round|int }} g</b></div>
+    <div class="metric"><span>Impressions</span><b>{{ metrics.nb }}</b></div>
+    <div class="metric"><span>Coût cumulé</span><b>{{ metrics.cout|eur }}</b></div>
+    <div class="metric"><span>En cours</span><b>{{ metrics.en_cours }}</b></div>
+  </div>
+  <nav class="tabs">
+    {% for ep, label in ONGLETS %}<a href="{{ url_for(ep) }}"{% if request.endpoint == ep %} class="active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+  {% endif %}
+</header>
+<main>
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+  <div class="flash {{ cat }}" role="status">{{ msg }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

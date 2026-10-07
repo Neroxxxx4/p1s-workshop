@@ -1,0 +1,10 @@
+# Jamais la vraie base ni ses sauvegardes sur GitHub
+data/
+*.db
+*.db.bak-*
+.secret_key
+.venv/
+__pycache__/
+.pytest_cache/
+.claude/
+.DS_Store

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Prix de vente{% endblock %}
+{% block content %}
+<div class="cols" id="prix">
+  <section class="card">
+    <h2>Impressions réussies</h2>
+    <p><small>Touche une pièce pour l'ajouter au panier ou l'en retirer.</small></p>
+    <div class="pieces">
+      {% for p in pieces %}
+      <button type="button" class="piece" data-id="{{ p.id }}" data-nom="{{ p.nom }}" data-cout="{{ p.cout }}" aria-pressed="false">
+        <span>{{ p.nom }}<small>{{ p.date_lancement|date_courte }}</small></span><b class="num">{{ p.cout|eur }}</b>
+      </button>
+      {% else %}
+      <p class="empty">Aucune impression réussie.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Panier</h2>
+    <ul id="panier" class="panier"></ul>
+    <p class="empty" id="panier-vide">Panier vide.</p>
+    <div class="ligne total"><span>Total coût</span><b class="num" id="p-cout">0.00 €</b></div>
+
+    <form method="post" action="{{ url_for('main.prix_vendre') }}" id="form-vente">
+      {{ csrf_field }}
+      <div id="ids"></div>
+      <label>Marge (%)
+        <div class="marge">
+          <input type="range" min="0" max="500" step="5" value="100" id="marge-range" aria-label="Marge">
+          <input type="number" min="0" step="any" value="100" name="marge" id="marge" inputmode="decimal">
+        </div>
+      </label>
+      <div class="prix-big"><span>Prix de vente</span><b class="num" id="p-prix">0.00 €</b></div>
+      <div class="grid4 metrics">
+        <div class="metric"><span>Coût</span><b id="m-cout">0.00 €</b></div>
+        <div class="metric"><span>Marge</span><b id="m-marge">100 %</b></div>
+        <div class="metric"><span>Prix</span><b id="m-prix">0.00 €</b></div>
+        <div class="metric"><span>Bénéfice</span><b id="m-benef">0.00 €</b></div>
+      </div>
+      <table class="scenarios">
+        <thead><tr><th>Marge</th><th>Prix</th><th>Bénéfice</th></tr></thead>
+        <tbody>{% for m in scenarios %}<tr data-m="{{ m }}"><td>+{{ m }} %</td><td class="num">—</td><td class="num">—</td></tr>{% endfor %}</tbody>
+      </table>
+      <label>Nom de la vente <input name="nom" placeholder="Vente sans nom"></label>
+      <div class="ligne">
+        <button type="button" class="btn" id="vider-panier">Vider le panier</button>
+        <button class="btn primary" id="btn-vendre" disabled>💶 Enregistrer la vente</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

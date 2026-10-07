@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
-    PORT=8501 DB_PATH=/data/workshop.db TZ=Europe/Paris
+    PORT=8501 DB_PATH=/data/workshop.db TZ=Europe/Paris \
+    HOME=/tmp
 
 WORKDIR /app
 COPY requirements.txt .
